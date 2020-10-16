@@ -19,11 +19,14 @@ if ($formSubmitted) {
   $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
   $previousQuestion = $result[0];
 
+  // Retient si la réponse donnée par l'utilisateur est la même que la bonne réponse à la question précédente
+  $answeredCorrectly = $_POST['answer'] === $previousQuestion['right_answer'];
+
   // Récupère le score de la page précédente
   $score = $_POST['score'];
 
-  // Si la réponse donnée par l'utilisateur est la même que la bonne réponse à la question précédente
-  if ($_POST['answer'] === $previousQuestion['right_answer']) {
+  // Si la réponse donnée par l'utilisateur était correcte
+  if ($answeredCorrectly) {
     // Augmente le score de 1
     $score += 1;
   }
@@ -90,8 +93,8 @@ if ($finished) {
 
     <!-- Si l'utilisateur vient de valider le formulaire -->
     <?php if ($formSubmitted): ?>
-      <!-- Si la réponse donnée par l'utilisateur correspond à la bonne réponse à la question précédente -->
-      <?php if ($_POST['answer'] === $previousQuestion['right_answer']): ?>
+      <!-- Si la réponse donnée par l'utilisateur était correcte -->
+      <?php if ($answeredCorrectly): ?>
         <!-- Affiche une alerte de succès -->
         <div id="answer-result" class="alert alert-success">
           <i class="fas fa-thumbs-up"></i> Bravo, c'était la bonne réponse!
@@ -111,7 +114,7 @@ if ($finished) {
     <?php if ($finished): ?>
       <!-- Affiche un message -->
       <p>C'est fini!</p>
-      <p>Vous avez atteint le score extraordinaire de <?= $score ?> bonne réponses sur <?= $questionCount ?>!</p>
+      <p>Vous avez atteint le score extraordinaire de <?= $score ?> bonnes réponses sur <?= $questionCount ?>!</p>
     <!-- Sinon -->
     <?php else: ?>
       <!-- Affiche le formulaire contenant la prochaine question -->
