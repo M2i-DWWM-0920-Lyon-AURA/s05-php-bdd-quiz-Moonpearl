@@ -1,10 +1,15 @@
 <?php
 
+// Initialise l'interface permettant de se connecter à la base de données
 $dbh = new PDO('mysql:host=localhost;dbname=php-quiz', 'root', 'root');
 
+// Retient si l'utilisateur vient de valider le formulaire (true)
+// ou s'il se connecte sur la page pour la première fois (false)
 $formSubmitted = isset($_POST['current-question-id']) && isset($_POST['answer']);
 
+// Si l'utilisateur vient de valider le formulaire
 if ($formSubmitted) {
+  // Récupère les données de la question précédente dans la base de données
   $stmt = $dbh->query('
   SELECT *
   FROM `questions`
@@ -15,6 +20,7 @@ if ($formSubmitted) {
   $previousQuestion = $result[0];
 }
 
+// Retient la requête permettant d'aller chercher la prochaine question dans la base de données
 $sqlQuery = '
 SELECT *
 FROM `questions`
@@ -22,7 +28,10 @@ ORDER BY `rank` ASC
 LIMIT 1
 ';
 
+// Si l'utilisateur vient de valider le formulaire
 if ($formSubmitted) {
+  // Rajoute une clause à la requête permettant de décaler les résultats
+  // afin d'avoir la question suivante
   $sqlQuery .= ' OFFSET ' . $previousQuestion['rank'];
 }
 
@@ -30,9 +39,12 @@ $stmt = $dbh->query($sqlQuery);
 
 $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Si le résultat de la requête est vide, retient que le quiz est terminé
 $finished = empty($result);
 
+// Si le quiz n'est pas terminé
 if (!$finished) {
+  // Retient la nouvelle question
   $question = $result[0];
 }
 
@@ -55,23 +67,32 @@ if (!$finished) {
   <div class="container">
     <h1>Quizz</h1>
 
+    <!-- Si l'utilisateur vient de valider le formulaire -->
     <?php if ($formSubmitted): ?>
+      <!-- Si la réponse donnée par l'utilisateur correspond à la bonne réponse à la question précédente -->
       <?php if ($_POST['answer'] === $previousQuestion['right_answer']): ?>
+        <!-- Affiche une alerte de succès -->
         <div id="answer-result" class="alert alert-success">
           <i class="fas fa-thumbs-up"></i> Bravo, c'était la bonne réponse!
         </div>
       <?php else: ?>
+        <!-- Affiche une alerte d'erreur -->
         <div id="answer-result" class="alert alert-danger">
           <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>
+            <!-- Affiche le texte de la bonne réponse à la question précédente -->
             <?= $previousQuestion['answer' . $previousQuestion['right_answer']] ?>
           </strong>
         </div>
       <?php endif; ?>
     <?php endif; ?>
 
+    <!-- Si le quiz est terminé -->
     <?php if ($finished): ?>
+      <!-- Affiche un message -->
       <div>C'est fini!</div>
+    <!-- Sinon -->
     <?php else: ?>
+      <!-- Affiche le formulaire contenant la prochaine question -->
       <h2 class="mt-4">Question n°<span id="question-id"><?= $question['rank'] ?></span></h2>
       <form id="question-form" method="post">
         <p id="current-question-text" class="question-text">
