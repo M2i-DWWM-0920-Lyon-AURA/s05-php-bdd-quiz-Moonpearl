@@ -1,6 +1,25 @@
 <?php
 
+var_dump($_POST);
+
 $dbh = new PDO('mysql:host=localhost;dbname=php-quiz', 'root', 'root');
+
+$formSubmitted = isset($_POST['current-question-id']) && isset($_POST['answer']);
+
+if ($formSubmitted) {
+  $stmt = $dbh->query('
+  SELECT *
+  FROM `questions`
+  WHERE `id` = ' . $_POST['current-question-id']
+  );
+
+  $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $previousQuestion = $result[0];
+}
+
+
+
+
 
 $stmt = $dbh->query('
 SELECT *
@@ -31,12 +50,19 @@ $question = $result[0];
 <body>
   <div class="container">
     <h1>Quizz</h1>
-    <div id="answer-result" class="alert alert-success">
-      <i class="fas fa-thumbs-up"></i> Bravo, c'était la bonne réponse!
-    </div>
-    <div id="answer-result" class="alert alert-danger">
-      <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>...</strong>
-    </div>
+
+    <?php if ($formSubmitted): ?>
+      <?php if ($_POST['answer'] === $previousQuestion['right_answer']): ?>
+        <div id="answer-result" class="alert alert-success">
+          <i class="fas fa-thumbs-up"></i> Bravo, c'était la bonne réponse!
+        </div>
+      <?php else: ?>
+        <div id="answer-result" class="alert alert-danger">
+          <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>...</strong>
+        </div>
+      <?php endif; ?>
+    <?php endif; ?>
+
     <h2 class="mt-4">Question n°<span id="question-id">0</span></h2>
     <form id="question-form" method="post">
       <p id="current-question-text" class="question-text">
@@ -68,7 +94,7 @@ $question = $result[0];
           </label>
         </div>
       </div>
-      <input type="hidden" name="current-question" value="0" />
+      <input type="hidden" name="current-question-id" value="<?= $question['id'] ?>" />
       <button type="submit" class="btn btn-primary">Valider</button>
     </form>
   </div>
