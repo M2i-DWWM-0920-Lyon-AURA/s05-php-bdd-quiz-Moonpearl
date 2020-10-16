@@ -5,7 +5,7 @@ $dbh = new PDO('mysql:host=localhost;dbname=php-quiz', 'root', 'root');
 
 // Retient si l'utilisateur vient de valider le formulaire (true)
 // ou s'il se connecte sur la page pour la première fois (false)
-$formSubmitted = isset($_POST['current-question-id']) && isset($_POST['answer']);
+$formSubmitted = isset($_POST['current-question-id']) && isset($_POST['answer']) && isset($_POST['score']);
 
 // Si l'utilisateur vient de valider le formulaire
 if ($formSubmitted) {
@@ -18,6 +18,19 @@ if ($formSubmitted) {
 
   $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
   $previousQuestion = $result[0];
+
+  // Récupère le score de la page précédente
+  $score = $_POST['score'];
+
+  // Si la réponse donnée par l'utilisateur est la même que la bonne réponse à la question précédente
+  if ($_POST['answer'] === $previousQuestion['right_answer']) {
+    // Augmente le score de 1
+    $score += 1;
+  }
+// Sinon, si l'utilisateur arrive sur la page de quiz pour la première fois
+} else {
+  // Initialise le score à zéro
+  $score = 0;
 }
 
 // Retient la requête permettant d'aller chercher la prochaine question dans la base de données
@@ -42,8 +55,16 @@ $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 // Si le résultat de la requête est vide, retient que le quiz est terminé
 $finished = empty($result);
 
-// Si le quiz n'est pas terminé
-if (!$finished) {
+// Si le quiz est terminé
+if ($finished) {
+  // Récupère le nombre de questions total dans le quiz
+  $stmt = $dbh->query('SELECT COUNT(`id`) FROM `questions`');
+
+  $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+  $questionCount = $result[0]['COUNT(`id`)'];
+// Sinon
+} else {
   // Retient la nouvelle question
   $question = $result[0];
 }
@@ -89,7 +110,8 @@ if (!$finished) {
     <!-- Si le quiz est terminé -->
     <?php if ($finished): ?>
       <!-- Affiche un message -->
-      <div>C'est fini!</div>
+      <p>C'est fini!</p>
+      <p>Vous avez atteint le score extraordinaire de <?= $score ?> bonne réponses sur <?= $questionCount ?>!</p>
     <!-- Sinon -->
     <?php else: ?>
       <!-- Affiche le formulaire contenant la prochaine question -->
@@ -125,6 +147,7 @@ if (!$finished) {
           </div>
         </div>
         <input type="hidden" name="current-question-id" value="<?= $question['id'] ?>" />
+        <input type="hidden" name="score" value="<?= $score ?>" />
         <button type="submit" class="btn btn-primary">Valider</button>
       </form>
     <?php endif; ?>
