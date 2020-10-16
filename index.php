@@ -1,7 +1,5 @@
 <?php
 
-var_dump($_POST);
-
 $dbh = new PDO('mysql:host=localhost;dbname=php-quiz', 'root', 'root');
 
 $formSubmitted = isset($_POST['current-question-id']) && isset($_POST['answer']);
@@ -16,10 +14,6 @@ if ($formSubmitted) {
   $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
   $previousQuestion = $result[0];
 }
-
-
-
-
 
 $stmt = $dbh->query('
 SELECT *
@@ -58,7 +52,9 @@ $question = $result[0];
         </div>
       <?php else: ?>
         <div id="answer-result" class="alert alert-danger">
-          <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>...</strong>
+          <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>
+            <?= $previousQuestion['answer' . $previousQuestion['right_answer']] ?>
+          </strong>
         </div>
       <?php endif; ?>
     <?php endif; ?>
