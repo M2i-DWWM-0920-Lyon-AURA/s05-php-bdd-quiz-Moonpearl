@@ -1,3 +1,20 @@
+<?php
+
+$dbh = new PDO('mysql:host=localhost;dbname=php-quiz', 'root', 'root');
+
+$stmt = $dbh->query('
+SELECT *
+FROM `questions`
+ORDER BY `rank` ASC
+LIMIT 1
+');
+
+$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$question = $result[0];
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -22,23 +39,33 @@
     </div>
     <h2 class="mt-4">Question n°<span id="question-id">0</span></h2>
     <form id="question-form" method="post">
-      <p id="current-question-text" class="question-text">Lorem ipsum dolor sit amet consectetur adipisicing elit. Nam sapiente est vero eveniet reiciendis dicta totam, sit omnis modi error iure! Dicta, iure repudiandae optio exercitationem omnis recusandae soluta deleniti!</p>
+      <p id="current-question-text" class="question-text">
+        <?= $question['description'] ?>
+      </p>
       <div id="answers" class="d-flex flex-column">
         <div class="custom-control custom-radio mb-2">
           <input class="custom-control-input" type="radio" name="answer" id="answer1" value="1">
-          <label class="custom-control-label" for="answer1" id="answer1-caption">Réponse 1</label>
+          <label class="custom-control-label" for="answer1" id="answer1-caption">
+            <?= $question['answer1'] ?>
+          </label>
         </div>
         <div class="custom-control custom-radio mb-2">
           <input class="custom-control-input" type="radio" name="answer" id="answer2" value="2">
-          <label class="custom-control-label" for="answer2" id="answer2-caption">Réponse 2</label>
+          <label class="custom-control-label" for="answer2" id="answer2-caption">
+            <?= $question['answer2'] ?>
+          </label>
         </div>
         <div class="custom-control custom-radio mb-2">
           <input class="custom-control-input" type="radio" name="answer" id="answer3" value="3">
-          <label class="custom-control-label" for="answer3" id="answer3-caption">Réponse 3</label>
+          <label class="custom-control-label" for="answer3" id="answer3-caption">
+            <?= $question['answer3'] ?>
+          </label>
         </div>
         <div class="custom-control custom-radio mb-2">
           <input class="custom-control-input" type="radio" name="answer" id="answer4" value="4">
-          <label class="custom-control-label" for="answer4" id="answer4-caption">Réponse 4</label>
+          <label class="custom-control-label" for="answer4" id="answer4-caption">
+            <?= $question['answer4'] ?>
+          </label>
         </div>
       </div>
       <input type="hidden" name="current-question" value="0" />
