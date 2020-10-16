@@ -11,16 +11,18 @@ $formSubmitted = isset($_POST['current-question-id']) && isset($_POST['answer'])
 if ($formSubmitted) {
   // Récupère les données de la question précédente dans la base de données
   $stmt = $dbh->query('
-  SELECT *
+  SELECT `questions`.`rank`, `questions`.`right_answer_id`, `answers`.`description` AS `answer_description`
   FROM `questions`
-  WHERE `id` = ' . $_POST['current-question-id']
+  JOIN `answers`
+  ON `questions`.`right_answer_id` = `answers`.`id`
+  WHERE `questions`.`id` = ' . $_POST['current-question-id']
   );
 
   $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
   $previousQuestion = $result[0];
 
   // Retient si la réponse donnée par l'utilisateur est la même que la bonne réponse à la question précédente
-  $answeredCorrectly = $_POST['answer'] === $previousQuestion['right_answer'];
+  $answeredCorrectly = $_POST['answer'] === $previousQuestion['right_answer_id'];
 
   // Récupère le score de la page précédente
   $score = $_POST['score'];
@@ -70,6 +72,13 @@ if ($finished) {
 } else {
   // Retient la nouvelle question
   $question = $result[0];
+  //
+  $stmt = $dbh->query('
+  SELECT * FROM `answers`
+  WHERE `question_id` = ' . $question['id']
+  );
+
+  $answers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
 
 ?>
@@ -104,7 +113,7 @@ if ($finished) {
         <div id="answer-result" class="alert alert-danger">
           <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>
             <!-- Affiche le texte de la bonne réponse à la question précédente -->
-            <?= $previousQuestion['answer' . $previousQuestion['right_answer']] ?>
+            <?= $previousQuestion['answer_description'] ?>
           </strong>
         </div>
       <?php endif; ?>
@@ -124,30 +133,14 @@ if ($finished) {
           <?= $question['description'] ?>
         </p>
         <div id="answers" class="d-flex flex-column">
-          <div class="custom-control custom-radio mb-2">
-            <input class="custom-control-input" type="radio" name="answer" id="answer1" value="1">
-            <label class="custom-control-label" for="answer1" id="answer1-caption">
-              <?= $question['answer1'] ?>
-            </label>
-          </div>
-          <div class="custom-control custom-radio mb-2">
-            <input class="custom-control-input" type="radio" name="answer" id="answer2" value="2">
-            <label class="custom-control-label" for="answer2" id="answer2-caption">
-              <?= $question['answer2'] ?>
-            </label>
-          </div>
-          <div class="custom-control custom-radio mb-2">
-            <input class="custom-control-input" type="radio" name="answer" id="answer3" value="3">
-            <label class="custom-control-label" for="answer3" id="answer3-caption">
-              <?= $question['answer3'] ?>
-            </label>
-          </div>
-          <div class="custom-control custom-radio mb-2">
-            <input class="custom-control-input" type="radio" name="answer" id="answer4" value="4">
-            <label class="custom-control-label" for="answer4" id="answer4-caption">
-              <?= $question['answer4'] ?>
-            </label>
-          </div>
+          <?php foreach ($answers as $answer): ?>
+            <div class="custom-control custom-radio mb-2">
+              <input class="custom-control-input" type="radio" name="answer" id="answer<?= $answer['id'] ?>" value="<?= $answer['id'] ?>">
+              <label class="custom-control-label" for="answer<?= $answer['id'] ?>">
+                <?= $answer['description'] ?>
+              </label>
+            </div>
+          <?php endforeach; ?>
         </div>
         <input type="hidden" name="current-question-id" value="<?= $question['id'] ?>" />
         <input type="hidden" name="score" value="<?= $score ?>" />
