@@ -1,3 +1,88 @@
+<?php
+
+// Initialise l'interface permettant de se connecter à la base de données
+$dbh = new PDO('mysql:host=localhost;dbname=php-quiz', 'root', 'root');
+
+// Retient si l'utilisateur vient de valider le formulaire (true)
+// ou s'il se connecte sur la page pour la première fois (false)
+$formSubmitted = isset($_POST['current-question-id']) && isset($_POST['answer']) && isset($_POST['score']);
+
+// Si l'utilisateur vient de valider le formulaire
+if ($formSubmitted) {
+  // Récupère les données de la question précédente dans la base de données
+  $stmt = $dbh->query('
+  SELECT `questions`.`rank`, `questions`.`right_answer_id`, `answers`.`description` AS `answer_description`
+  FROM `questions`
+  JOIN `answers`
+  ON `questions`.`right_answer_id` = `answers`.`id`
+  WHERE `questions`.`id` = ' . $_POST['current-question-id']
+  );
+
+  $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $previousQuestion = $result[0];
+
+  // Retient si la réponse donnée par l'utilisateur est la même que la bonne réponse à la question précédente
+  $answeredCorrectly = $_POST['answer'] === $previousQuestion['right_answer_id'];
+
+  // Récupère le score de la page précédente
+  $score = $_POST['score'];
+
+  // Si la réponse donnée par l'utilisateur était correcte
+  if ($answeredCorrectly) {
+    // Augmente le score de 1
+    $score += 1;
+  }
+// Sinon, si l'utilisateur arrive sur la page de quiz pour la première fois
+} else {
+  // Initialise le score à zéro
+  $score = 0;
+}
+
+// Retient la requête permettant d'aller chercher la prochaine question dans la base de données
+$sqlQuery = '
+SELECT *
+FROM `questions`
+ORDER BY `rank` ASC
+LIMIT 1
+';
+
+// Si l'utilisateur vient de valider le formulaire
+if ($formSubmitted) {
+  // Rajoute une clause à la requête permettant de décaler les résultats
+  // afin d'avoir la question suivante
+  $sqlQuery .= ' OFFSET ' . $previousQuestion['rank'];
+}
+
+$stmt = $dbh->query($sqlQuery);
+
+$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Si le résultat de la requête est vide, retient que le quiz est terminé
+$finished = empty($result);
+
+// Si le quiz est terminé
+if ($finished) {
+  // Récupère le nombre de questions total dans le quiz
+  $stmt = $dbh->query('SELECT COUNT(`id`) FROM `questions`');
+
+  $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+  $questionCount = $result[0]['COUNT(`id`)'];
+// Sinon
+} else {
+  // Retient la nouvelle question
+  $question = $result[0];
+  //
+  $stmt = $dbh->query('
+  SELECT * FROM `answers`
+  WHERE `question_id` = ' . $question['id']
+  );
+
+  $answers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -14,36 +99,55 @@
 <body>
   <div class="container">
     <h1>Quizz</h1>
-    <div id="answer-result" class="alert alert-success">
-      <i class="fas fa-thumbs-up"></i> Bravo, c'était la bonne réponse!
-    </div>
-    <div id="answer-result" class="alert alert-danger">
-      <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>...</strong>
-    </div>
-    <h2 class="mt-4">Question n°<span id="question-id">0</span></h2>
-    <form id="question-form" method="post">
-      <p id="current-question-text" class="question-text">Lorem ipsum dolor sit amet consectetur adipisicing elit. Nam sapiente est vero eveniet reiciendis dicta totam, sit omnis modi error iure! Dicta, iure repudiandae optio exercitationem omnis recusandae soluta deleniti!</p>
-      <div id="answers" class="d-flex flex-column">
-        <div class="custom-control custom-radio mb-2">
-          <input class="custom-control-input" type="radio" name="answer" id="answer1" value="1">
-          <label class="custom-control-label" for="answer1" id="answer1-caption">Réponse 1</label>
+
+    <!-- Si l'utilisateur vient de valider le formulaire -->
+    <?php if ($formSubmitted): ?>
+      <!-- Si la réponse donnée par l'utilisateur était correcte -->
+      <?php if ($answeredCorrectly): ?>
+        <!-- Affiche une alerte de succès -->
+        <div id="answer-result" class="alert alert-success">
+          <i class="fas fa-thumbs-up"></i> Bravo, c'était la bonne réponse!
         </div>
-        <div class="custom-control custom-radio mb-2">
-          <input class="custom-control-input" type="radio" name="answer" id="answer2" value="2">
-          <label class="custom-control-label" for="answer2" id="answer2-caption">Réponse 2</label>
+      <?php else: ?>
+        <!-- Affiche une alerte d'erreur -->
+        <div id="answer-result" class="alert alert-danger">
+          <i class="fas fa-thumbs-down"></i> Hé non! La bonne réponse était <strong>
+            <!-- Affiche le texte de la bonne réponse à la question précédente -->
+            <?= $previousQuestion['answer_description'] ?>
+          </strong>
         </div>
-        <div class="custom-control custom-radio mb-2">
-          <input class="custom-control-input" type="radio" name="answer" id="answer3" value="3">
-          <label class="custom-control-label" for="answer3" id="answer3-caption">Réponse 3</label>
+      <?php endif; ?>
+    <?php endif; ?>
+
+    <!-- Si le quiz est terminé -->
+    <?php if ($finished): ?>
+      <!-- Affiche un message -->
+      <p>C'est fini!</p>
+      <p>Vous avez atteint le score extraordinaire de <?= $score ?> bonnes réponses sur <?= $questionCount ?>!</p>
+    <!-- Sinon -->
+    <?php else: ?>
+      <!-- Affiche le formulaire contenant la prochaine question -->
+      <h2 class="mt-4">Question n°<span id="question-id"><?= $question['rank'] ?></span></h2>
+      <form id="question-form" method="post">
+        <p id="current-question-text" class="question-text">
+          <?= $question['description'] ?>
+        </p>
+        <div id="answers" class="d-flex flex-column">
+          <?php foreach ($answers as $answer): ?>
+            <div class="custom-control custom-radio mb-2">
+              <input class="custom-control-input" type="radio" name="answer" id="answer<?= $answer['id'] ?>" value="<?= $answer['id'] ?>">
+              <label class="custom-control-label" for="answer<?= $answer['id'] ?>">
+                <?= $answer['description'] ?>
+              </label>
+            </div>
+          <?php endforeach; ?>
         </div>
-        <div class="custom-control custom-radio mb-2">
-          <input class="custom-control-input" type="radio" name="answer" id="answer4" value="4">
-          <label class="custom-control-label" for="answer4" id="answer4-caption">Réponse 4</label>
-        </div>
-      </div>
-      <input type="hidden" name="current-question" value="0" />
-      <button type="submit" class="btn btn-primary">Valider</button>
-    </form>
+        <input type="hidden" name="current-question-id" value="<?= $question['id'] ?>" />
+        <input type="hidden" name="score" value="<?= $score ?>" />
+        <button type="submit" class="btn btn-primary">Valider</button>
+      </form>
+    <?php endif; ?>
+
   </div>
 </body>
 </html>
